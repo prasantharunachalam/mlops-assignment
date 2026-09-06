@@ -101,11 +101,18 @@ export class MonitoringDashboardComponent implements OnInit {
       const { modelVersion, startTime, endTime } = this.filterForm.value;
       const [model_id, version_id] = modelVersion.split('|');
 
+      // Ensure start time is beginning of day and end time is end of day
+      const startDate = new Date(startTime);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(endTime);
+      endDate.setHours(23, 59, 59, 999);
+
       this.monitoringService.getMetrics(
         model_id,
         version_id,
-        startTime.toISOString(),
-        endTime.toISOString()
+        startDate.toISOString(),
+        endDate.toISOString()
       ).subscribe({
         next: (response) => {
           this.metrics = response.items;
