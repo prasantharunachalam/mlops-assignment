@@ -8,7 +8,7 @@ Tests:
 - Idempotency works across retries
 """
 import pytest
-from app.models import DeploymentStatus
+from app.models import DeploymentStatus, Deployment
 from app.services import DeploymentService
 from app.repositories import DeploymentRepository, ModelRepository
 from app.schemas.deployment import DeploymentCreate
@@ -31,7 +31,9 @@ class TestRollbackAndIdempotency:
         """Test rolling back to a prior successful deployment."""
         # Create version 1.0.0
         from app.models import ModelVersion
+        from tests.conftest import generate_version_id
         version_1 = ModelVersion(
+            id=generate_version_id(),
             model_id=sample_model.id,
             version_number="1.0.0",
             framework="sklearn",
@@ -51,7 +53,7 @@ class TestRollbackAndIdempotency:
         )
         dep_v1, _ = deployment_service.create_deployment(deploy_v1)
         obj_v1 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep_v1.id).first()
         obj_v1.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -64,7 +66,7 @@ class TestRollbackAndIdempotency:
         )
         dep_v2, _ = deployment_service.create_deployment(deploy_v2)
         obj_v2 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep_v2.id).first()
         obj_v2.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -78,7 +80,7 @@ class TestRollbackAndIdempotency:
         assert rollback.environment == "STAGING"
         assert rollback.rolled_back_from_id == dep_v2.id
         assert rollback.idempotency_key == f"rollback-{dep_v2.id}"
-        assert rollback.status == DeploymentStatus.PENDING
+        assert rollback.status == DeploymentStatus.REQUESTED
 
     def test_rollback_without_prior_deployment_fails(
         self, deployment_service, approved_version
@@ -110,7 +112,7 @@ class TestRollbackAndIdempotency:
         )
         dep1, _ = deployment_service.create_deployment(dep1_data)
         obj1 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep1.id).first()
         obj1.status = DeploymentStatus.FAILED
         db_session.commit()
@@ -136,7 +138,9 @@ class TestRollbackAndIdempotency:
         from app.models import ModelVersion
 
         # Create two different versions
+        from tests.conftest import generate_version_id
         v1 = ModelVersion(
+            id=generate_version_id(),
             model_id=sample_model.id,
             version_number="1.0.0",
             framework="sklearn",
@@ -145,6 +149,7 @@ class TestRollbackAndIdempotency:
             lifecycle_stage="APPROVED"
         )
         v2 = ModelVersion(
+            id=generate_version_id(),
             model_id=sample_model.id,
             version_number="2.0.0",
             framework="tensorflow",
@@ -165,7 +170,7 @@ class TestRollbackAndIdempotency:
         )
         dep_v1, _ = deployment_service.create_deployment(dep_v1_data)
         obj_v1 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep_v1.id).first()
         obj_v1.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -178,7 +183,7 @@ class TestRollbackAndIdempotency:
         )
         dep_v2, _ = deployment_service.create_deployment(dep_v2_data)
         obj_v2 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep_v2.id).first()
         obj_v2.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -204,9 +209,11 @@ class TestRollbackAndIdempotency:
         from app.models import ModelVersion
 
         # Create three versions
+        from tests.conftest import generate_version_id
         versions = []
         for i in range(1, 4):
             v = ModelVersion(
+                id=generate_version_id(),
                 model_id=sample_model.id,
                 version_number=f"{i}.0.0",
                 framework="sklearn",
@@ -230,7 +237,7 @@ class TestRollbackAndIdempotency:
             )
             dep, _ = deployment_service.create_deployment(dep_data)
             obj = db_session.query(
-                deployment_service.deployment_repo.model_class
+                Deployment
             ).filter_by(id=dep.id).first()
             obj.status = DeploymentStatus.SUCCEEDED
             db_session.commit()
@@ -242,7 +249,7 @@ class TestRollbackAndIdempotency:
 
         # Mark rollback as succeeded
         obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=rollback1.id).first()
         obj.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -307,7 +314,9 @@ class TestRollbackAndIdempotency:
         from app.models import ModelVersion
 
         # Create two versions
+        from tests.conftest import generate_version_id
         v1 = ModelVersion(
+            id=generate_version_id(),
             model_id=sample_model.id,
             version_number="1.0.0",
             framework="sklearn",
@@ -316,6 +325,7 @@ class TestRollbackAndIdempotency:
             lifecycle_stage="APPROVED"
         )
         v2 = ModelVersion(
+            id=generate_version_id(),
             model_id=sample_model.id,
             version_number="2.0.0",
             framework="sklearn",
@@ -336,7 +346,7 @@ class TestRollbackAndIdempotency:
         )
         dep1, _ = deployment_service.create_deployment(dep1_data)
         obj1 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep1.id).first()
         obj1.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -349,7 +359,7 @@ class TestRollbackAndIdempotency:
         )
         dep2, _ = deployment_service.create_deployment(dep2_data)
         obj2 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep2.id).first()
         obj2.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -401,7 +411,7 @@ class TestRollbackAndIdempotency:
 
         # Mark as failed
         obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=deployment.id).first()
         obj.status = DeploymentStatus.FAILED
         db_session.commit()

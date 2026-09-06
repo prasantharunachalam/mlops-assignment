@@ -5,6 +5,7 @@ Provides database setup, FastAPI test client, and common fixtures
 for testing the MLOps platform backend.
 """
 import os
+import uuid
 from typing import Generator
 import pytest
 from sqlalchemy import create_engine
@@ -17,6 +18,16 @@ from app.models import Model, ModelVersion, Deployment
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite:///:memory:"
+
+# Helper function to generate IDs
+def generate_model_id() -> str:
+    return f"model-{uuid.uuid4()}"
+
+def generate_version_id() -> str:
+    return f"ver-{uuid.uuid4()}"
+
+def generate_deployment_id() -> str:
+    return f"dep-{uuid.uuid4()}"
 
 @pytest.fixture(scope="function")
 def db_engine():
@@ -61,7 +72,9 @@ def client(db_session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def sample_model(db_session) -> Model:
     """Create a sample model for testing."""
+    import uuid
     model = Model(
+        id=f"model-{uuid.uuid4()}",
         name="test-fraud-detector",
         owner="test-user",
         description="Test fraud detection model"
@@ -75,7 +88,9 @@ def sample_model(db_session) -> Model:
 @pytest.fixture
 def sample_version(db_session, sample_model) -> ModelVersion:
     """Create a sample model version for testing."""
+    import uuid
     version = ModelVersion(
+        id=f"ver-{uuid.uuid4()}",
         model_id=sample_model.id,
         version_number="1.0.0",
         framework="scikit-learn",
@@ -94,7 +109,9 @@ def sample_version(db_session, sample_model) -> ModelVersion:
 @pytest.fixture
 def approved_version(db_session, sample_model) -> ModelVersion:
     """Create an approved model version ready for deployment."""
+    import uuid
     version = ModelVersion(
+        id=f"ver-{uuid.uuid4()}",
         model_id=sample_model.id,
         version_number="2.0.0",
         framework="tensorflow",
@@ -113,7 +130,9 @@ def approved_version(db_session, sample_model) -> ModelVersion:
 @pytest.fixture
 def sample_deployment(db_session, approved_version) -> Deployment:
     """Create a sample deployment for testing."""
+    import uuid
     deployment = Deployment(
+        id=f"dep-{uuid.uuid4()}",
         model_version_id=approved_version.id,
         environment="STAGING",
         status="SUCCEEDED",
