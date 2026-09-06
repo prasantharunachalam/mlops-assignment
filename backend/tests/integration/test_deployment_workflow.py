@@ -9,7 +9,7 @@ Tests end-to-end deployment scenarios including:
 - Environment validation
 """
 import pytest
-from app.models import LifecycleStage, DeploymentStatus
+from app.models import LifecycleStage, DeploymentStatus, Deployment
 from app.services import DeploymentService, RegistryService
 from app.repositories import DeploymentRepository, ModelRepository
 from app.schemas.deployment import DeploymentCreate
@@ -48,7 +48,7 @@ class TestDeploymentWorkflow:
         assert deployment is not None
         assert deployment.model_version_id == approved_version.id
         assert deployment.environment == "STAGING"
-        assert deployment.status == DeploymentStatus.PENDING
+        assert deployment.status == DeploymentStatus.REQUESTED
         assert deployment.attempt_count == 1
 
     def test_deploy_draft_version_to_staging_succeeds(
@@ -153,7 +153,7 @@ class TestDeploymentWorkflow:
 
         # Simulate successful STAGING deployment
         staging_deployment_obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=staging_deployment.id).first()
         staging_deployment_obj.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -205,7 +205,7 @@ class TestDeploymentWorkflow:
 
         # Mark STAGING deployment as succeeded
         staging_obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=staging_dep.id).first()
         staging_obj.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -240,7 +240,7 @@ class TestDeploymentWorkflow:
 
         # Mark as failed
         dep_obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=deployment.id).first()
         dep_obj.status = DeploymentStatus.FAILED
         db_session.commit()
@@ -251,7 +251,7 @@ class TestDeploymentWorkflow:
         assert error is None
         assert retried is not None
         assert retried.attempt_count == 2
-        assert retried.status == DeploymentStatus.PENDING
+        assert retried.status == DeploymentStatus.REQUESTED
 
     def test_retry_succeeded_deployment_fails(
         self, deployment_service, sample_deployment
@@ -278,7 +278,7 @@ class TestDeploymentWorkflow:
 
         # Set to failed with max attempts
         dep_obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=deployment.id).first()
         dep_obj.status = DeploymentStatus.FAILED
         dep_obj.attempt_count = DeploymentService.MAX_RETRY_ATTEMPTS
@@ -310,7 +310,7 @@ class TestDeploymentWorkflow:
         )
         dep1, _ = deployment_service.create_deployment(data1)
         obj1 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep1.id).first()
         obj1.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
@@ -323,7 +323,7 @@ class TestDeploymentWorkflow:
         )
         dep2, _ = deployment_service.create_deployment(data2)
         obj2 = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=dep2.id).first()
         obj2.status = DeploymentStatus.FAILED
         db_session.commit()
@@ -348,7 +348,7 @@ class TestDeploymentWorkflow:
 
         # Create succeeded STAGING deployment to enable PRODUCTION
         obj = db_session.query(
-            deployment_service.deployment_repo.model_class
+            Deployment
         ).filter_by(id=staging_dep.id).first()
         obj.status = DeploymentStatus.SUCCEEDED
         db_session.commit()
