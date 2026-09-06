@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>Create New Version</h2>
+
+<form [formGroup]="versionForm" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Version Number</mat-label>
+      <input matInput formControlName="version_number" placeholder="e.g., 1.0.0" required>
+      <mat-error *ngIf="versionForm.get('version_number')?.hasError('required')">
+        Version number is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Framework</mat-label>
+      <input matInput formControlName="framework" placeholder="e.g., scikit-learn" required>
+      <mat-error *ngIf="versionForm.get('framework')?.hasError('required')">
+        Framework is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Algorithm</mat-label>
+      <input matInput formControlName="algorithm" placeholder="e.g., RandomForest">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Artifact URI</mat-label>
+      <input matInput formControlName="artifact_uri" placeholder="e.g., s3://models/fraud-detector/v1.0.0" required>
+      <mat-error *ngIf="versionForm.get('artifact_uri')?.hasError('required')">
+        Artifact URI is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Training Data Reference</mat-label>
+      <input matInput formControlName="training_data_ref" placeholder="e.g., s3://data/training/2024-01">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tags (JSON)</mat-label>
+      <textarea matInput formControlName="tags" rows="2" placeholder='{"env": "dev", "team": "ml"}'></textarea>
+      <mat-hint>Optional JSON object for metadata</mat-hint>
+    </mat-form-field>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="!versionForm.valid || loading">
+      {{ loading ? 'Creating...' : 'Create Version' }}
+    </button>
+  </mat-dialog-actions>
+</form>

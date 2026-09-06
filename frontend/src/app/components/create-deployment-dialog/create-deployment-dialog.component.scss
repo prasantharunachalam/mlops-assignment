@@ -1,0 +1,28 @@
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.error-message {
+  color: #f44336;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.info-message {
+  background: #e3f2fd;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: #1565c0;
+  }
+}
+
+mat-dialog-content {
+  min-width: 450px;
+  padding: 20px 24px;
+}

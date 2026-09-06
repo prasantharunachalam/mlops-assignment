@@ -1,0 +1,8 @@
+export enum LifecycleStage {
+  DRAFT = 'DRAFT',
+  VALIDATED = 'VALIDATED',
+  APPROVED = 'APPROVED',
+  STAGING = 'STAGING',
+  PRODUCTION = 'PRODUCTION',
+  ARCHIVED = 'ARCHIVED'
+}

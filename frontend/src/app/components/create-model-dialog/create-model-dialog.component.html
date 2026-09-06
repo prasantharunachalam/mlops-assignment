@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>Create New Model</h2>
+
+<form [formGroup]="modelForm" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Model Name</mat-label>
+      <input matInput formControlName="name" placeholder="e.g., fraud-detector" required>
+      <mat-error *ngIf="modelForm.get('name')?.hasError('required')">
+        Model name is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Owner</mat-label>
+      <input matInput formControlName="owner" placeholder="e.g., data-science-team" required>
+      <mat-error *ngIf="modelForm.get('owner')?.hasError('required')">
+        Owner is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="3" placeholder="Model description (optional)"></textarea>
+    </mat-form-field>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="!modelForm.valid || loading">
+      {{ loading ? 'Creating...' : 'Create Model' }}
+    </button>
+  </mat-dialog-actions>
+</form>

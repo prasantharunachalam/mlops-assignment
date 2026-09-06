@@ -1,0 +1,76 @@
+<div class="model-detail-container" *ngIf="model">
+  <div class="header">
+    <h1>{{ model.name }}</h1>
+  </div>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Model Information</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p><strong>Owner:</strong> {{ model.owner }}</p>
+      <p><strong>Description:</strong> {{ model.description || 'No description' }}</p>
+      <p><strong>Created:</strong> {{ model.created_at | date:'medium' }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="versions-header">
+    <h2>Versions</h2>
+    <button mat-raised-button color="primary" (click)="openCreateVersionDialog()">
+      <mat-icon>add</mat-icon>
+      Create Version
+    </button>
+  </div>
+
+  <mat-card *ngFor="let version of versions" class="version-card">
+    <mat-card-header>
+      <mat-card-title>Version {{ version.version_number }}</mat-card-title>
+      <div class="card-actions">
+        <mat-chip-set>
+          <mat-chip [color]="getStageColor(version.lifecycle_stage)">
+            {{ version.lifecycle_stage }}
+          </mat-chip>
+        </mat-chip-set>
+        <button mat-icon-button [matMenuTriggerFor]="menu">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          <button mat-menu-item
+                  *ngFor="let stage of lifecycleStages"
+                  [disabled]="!canPromoteTo(version.lifecycle_stage, stage)"
+                  (click)="promoteLifecycle(version, stage)">
+            Promote to {{ stage }}
+          </button>
+        </mat-menu>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <p><strong>Version ID:</strong> <code>{{ version.id }}</code></p>
+      <p><strong>Framework:</strong> {{ version.framework }}</p>
+      <p *ngIf="version.algorithm"><strong>Algorithm:</strong> {{ version.algorithm }}</p>
+      <p><strong>Artifact URI:</strong> {{ version.artifact_uri }}</p>
+      <p *ngIf="version.training_data_ref"><strong>Training Data:</strong> {{ version.training_data_ref }}</p>
+      <p><strong>Row Version:</strong> {{ version.row_version }} <small>(for optimistic locking)</small></p>
+      <p><strong>Created:</strong> {{ version.created_at | date:'medium' }}</p>
+      <p><strong>Updated:</strong> {{ version.updated_at | date:'medium' }}</p>
+      <div *ngIf="version.tags && Object.keys(version.tags).length > 0" class="tags">
+        <strong>Tags:</strong>
+        <span class="tag" *ngFor="let tag of Object.keys(version.tags)">
+          {{ tag }}: {{ version.tags[tag] }}
+        </span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="versions.length === 0 && !loading" class="empty-state">
+    <p>No versions found</p>
+    <button mat-raised-button color="primary" (click)="openCreateVersionDialog()">
+      <mat-icon>add</mat-icon>
+      Create First Version
+    </button>
+  </div>
+</div>
+
+<div *ngIf="loading" class="loading">
+  <mat-spinner></mat-spinner>
+</div>

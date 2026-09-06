@@ -1,0 +1,192 @@
+MLOps Platform - System Architecture Diagram
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              USER BROWSER                               │
+│                          http://localhost:4200                          │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 │ HTTP Requests
+                                 │
+┌────────────────────────────────▼────────────────────────────────────────┐
+│                         ANGULAR 17 FRONTEND                             │
+│                        (Standalone Components)                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
+│  │   Models    │  │ Deployments │  │ Monitoring  │  │   Shared    │  │
+│  │   Module    │  │   Module    │  │   Module    │  │ Components  │  │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │              Core Services (API, HTTP Client)                    │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 │ REST API calls
+                                 │ /api/v1/*
+                                 │
+┌────────────────────────────────▼────────────────────────────────────────┐
+│                          FASTAPI BACKEND                                │
+│                        http://localhost:8000                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │                       API LAYER (Routers)                         │ │
+│  ├───────────────────────────────────────────────────────────────────┤ │
+│  │  /health  │  /models  │  /versions  │  /deployments  │  /metrics │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                   │                                     │
+│  ┌───────────────────────────────▼───────────────────────────────────┐ │
+│  │                      SERVICE LAYER                                │ │
+│  ├───────────────────────────────────────────────────────────────────┤ │
+│  │  RegistryService  │  DeploymentService  │  MonitoringService     │ │
+│  │                                                                   │ │
+│  │  - Lifecycle state machine validation                            │ │
+│  │  - Approval gate enforcement                                     │ │
+│  │  - Rollback target validation                                    │ │
+│  │  - Retry cap (3 attempts)                                        │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                   │                                     │
+│  ┌───────────────────────────────▼───────────────────────────────────┐ │
+│  │                   REPOSITORY LAYER (Data Access)                  │ │
+│  ├───────────────────────────────────────────────────────────────────┤ │
+│  │  ModelRepository  │  DeploymentRepository  │  MetricRepository   │ │
+│  │                                                                   │ │
+│  │  - Optimistic locking (row_version)                              │ │
+│  │  - Idempotency key handling                                      │ │
+│  │  - Cursor-based pagination                                       │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │                   BACKGROUND WORKER (In-Process)                  │ │
+│  ├───────────────────────────────────────────────────────────────────┤ │
+│  │  - Polls for REQUESTED deployments                               │ │
+│  │  - FOR UPDATE SKIP LOCKED (concurrency)                          │ │
+│  │  - State transitions: VALIDATING → DEPLOYING → SUCCEEDED/FAILED  │ │
+│  │  - Simulated deployment target (5s delay)                        │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 │ SQLAlchemy ORM
+                                 │ psycopg2 driver
+                                 │
+┌────────────────────────────────▼────────────────────────────────────────┐
+│                        POSTGRESQL 16 DATABASE                           │
+│                          localhost:5432/mlops                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
+│  │   models    │  │model_versions│ │ deployments │  │metric_snapshots│
+│  ├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤  │
+│  │ id (PK)     │  │ id (PK)     │  │ id (PK)     │  │ id (PK)     │  │
+│  │ name        │  │ model_id FK │  │ version_id  │  │ version_id  │  │
+│  │ owner       │  │ version_num │  │ environment │  │ captured_at │  │
+│  │ description │  │ framework   │  │ status      │  │ latency_ms  │  │
+│  │ created_at  │  │ algorithm   │  │ idempotency │  │ throughput  │  │
+│  └─────────────┘  │ artifact_uri│  │ requested_at│  │ error_rate  │  │
+│                   │ lifecycle   │  │ completed_at│  │ drift_score │  │
+│                   │ row_version │  │ rollback_id │  │ quality     │  │
+│                   │ tags (JSONB)│  │ attempts    │  │ availability│  │
+│                   └─────────────┘  └─────────────┘  └─────────────┘  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+KEY FLOWS:
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       MODEL LIFECYCLE FLOW                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+DRAFT → VALIDATED → APPROVED → STAGING → PRODUCTION → ARCHIVED
+  ↓         ↓          ↓           ↓          ↓
+  └─────────┴──────────┴───────────┴──────────┘
+          (Rollback transitions allowed)
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      DEPLOYMENT WORKFLOW                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. User creates deployment → REQUESTED status
+2. Worker picks up → VALIDATING (checks approval gates)
+3. Worker deploys → DEPLOYING (simulated 5s delay)
+4. Outcome:
+   - Success → SUCCEEDED
+   - Failure → FAILED (can retry up to 3 times)
+5. Rollback: Creates new deployment to previous version
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    CONCURRENCY CONTROLS                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. Optimistic Locking:
+   - ModelVersion has row_version field
+   - Lifecycle promotion requires current row_version
+   - Stale version triggers 409 Conflict
+
+2. Idempotency:
+   - Each deployment has unique idempotency_key (UUID)
+   - Duplicate key triggers 409 Conflict
+   - Retry preserves original key
+
+3. Worker Concurrency:
+   - SELECT ... FOR UPDATE SKIP LOCKED
+   - Multiple workers can run safely
+   - No deployment processed twice
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      TECHNOLOGY STACK                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Frontend:  Angular 17 (Standalone) + Material Design + RxJS
+Backend:   FastAPI + SQLAlchemy + Pydantic + Alembic
+Database:  PostgreSQL 16 (JSONB support)
+Worker:    In-process poller (background thread)
+Container: Docker Compose (db + backend + frontend)
+Testing:   pytest (backend), Jasmine/Karma (frontend)
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        SECURITY NOTES                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+- No authentication (future: JWT + role claims)
+- Pydantic validation on all inputs
+- SQLAlchemy ORM (prevents SQL injection)
+- Environment variables for secrets
+- CORS configured for frontend origin
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DEPLOYMENT ARCHITECTURE                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Docker Compose Orchestration:
+
+┌──────────────┐
+│   db         │ PostgreSQL 16
+│   port: 5432 │ Volume: postgres_data
+└──────┬───────┘
+       │
+       │ depends_on
+       ▼
+┌──────────────┐
+│   backend    │ FastAPI + Worker
+│   port: 8000 │ Runs migrations on startup
+└──────┬───────┘
+       │
+       │ depends_on
+       ▼
+┌──────────────┐
+│   frontend   │ Angular 17 (nginx)
+│   port: 4200 │ Serves static files
+└──────────────┘
+
+
+Single command to run everything:
+$ docker compose up --build

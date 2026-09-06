@@ -1,0 +1,7 @@
+export enum DeploymentStatus {
+  REQUESTED = 'REQUESTED',
+  VALIDATING = 'VALIDATING',
+  DEPLOYING = 'DEPLOYING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED'
+}

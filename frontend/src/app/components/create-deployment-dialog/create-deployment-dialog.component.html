@@ -1,0 +1,46 @@
+<h2 mat-dialog-title>Create New Deployment</h2>
+
+<form [formGroup]="deploymentForm" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Model Version</mat-label>
+      <mat-select formControlName="model_version_id" required>
+        <mat-option *ngFor="let version of modelVersions" [value]="version.id">
+          {{ getVersionDisplay(version) }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="deploymentForm.get('model_version_id')?.hasError('required')">
+        Model version is required
+      </mat-error>
+      <mat-hint *ngIf="loadingVersions">Loading versions...</mat-hint>
+      <mat-hint *ngIf="!loadingVersions && modelVersions.length === 0">No versions available</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Environment</mat-label>
+      <mat-select formControlName="environment" required>
+        <mat-option *ngFor="let env of environments" [value]="env">
+          {{ env }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="deploymentForm.get('environment')?.hasError('required')">
+        Environment is required
+      </mat-error>
+    </mat-form-field>
+
+    <div class="info-message">
+      <p><strong>Note:</strong> An idempotency key (UUID) will be auto-generated for this deployment request.</p>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="!deploymentForm.valid || loading || loadingVersions">
+      {{ loading ? 'Creating...' : 'Create Deployment' }}
+    </button>
+  </mat-dialog-actions>
+</form>
