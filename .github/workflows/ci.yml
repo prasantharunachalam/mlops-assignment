@@ -27,10 +27,10 @@ jobs:
           cd backend
           ruff check .
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           cd backend
-          pytest
+          pytest --cov=app --cov-report=term-missing --cov-fail-under=80
 
   frontend-tests:
     runs-on: ubuntu-latest

@@ -4,6 +4,7 @@ import random
 from app.database import SessionLocal
 from app.repositories import DeploymentRepository
 from app.models import DeploymentStatus
+from app.utils.logging import set_correlation_id
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,10 @@ class DeploymentWorker:
             deployments = repo.get_requested_deployments(limit=5)
 
             for deployment in deployments:
+                # Set correlation ID for distributed tracing
+                if deployment.correlation_id:
+                    set_correlation_id(deployment.correlation_id)
+
                 logger.info(f"Processing deployment {deployment.id}")
 
                 # Simulated deployment steps
