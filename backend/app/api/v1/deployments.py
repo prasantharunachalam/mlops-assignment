@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
@@ -17,9 +17,12 @@ def get_deployment_service(db: Session = Depends(get_db)) -> DeploymentService:
 @router.post("/deployments", response_model=DeploymentResponse, status_code=202)
 def create_deployment(
     deployment_data: DeploymentCreate,
+    request: Request,
     service: DeploymentService = Depends(get_deployment_service),
 ):
-    deployment, error = service.create_deployment(deployment_data)
+    # Capture correlation ID from request for distributed tracing
+    correlation_id = request.headers.get("X-Correlation-ID")
+    deployment, error = service.create_deployment(deployment_data, correlation_id)
     if error:
         if "not found" in error.lower():
             return not_found_error(error)

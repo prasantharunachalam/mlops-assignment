@@ -16,6 +16,7 @@ class DeploymentResponse(BaseModel):
     environment: str
     status: DeploymentStatus
     idempotency_key: str
+    correlation_id: Optional[str] = None
     requested_at: datetime
     completed_at: Optional[datetime]
     rolled_back_from_id: Optional[str]

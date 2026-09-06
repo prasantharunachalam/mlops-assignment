@@ -1,0 +1,38 @@
+graph TB
+    subgraph User["User Browser (localhost:4200)"]
+        Browser[Angular 17 Frontend]
+    end
+
+    subgraph Frontend["Angular Frontend - Standalone Components"]
+        ModelsUI[Models Module]
+        DeploymentsUI[Deployments Module]
+        MonitoringUI[Monitoring Module]
+        SharedUI[Shared Components]
+        CoreServices[Core Services]
+    end
+
+    subgraph Backend["FastAPI Backend (localhost:8000)"]
+        API[API Layer - Routers]
+        Services[Service Layer]
+        Repos[Repository Layer]
+        Worker[Background Worker]
+    end
+
+    subgraph Database["PostgreSQL 16 (localhost:5432)"]
+        ModelsTable[(models)]
+        VersionsTable[(model_versions)]
+        DeploymentsTable[(deployments)]
+        MetricsTable[(metric_snapshots)]
+    end
+
+    Browser --> Frontend
+    Frontend --> API
+    API --> Services
+    Services --> Repos
+    Repos --> Database
+    Worker --> Repos
+
+    style User fill:#e1f5ff
+    style Frontend fill:#fff4e6
+    style Backend fill:#f3e5f5
+    style Database fill:#e8f5e9

@@ -12,7 +12,7 @@ class DeploymentService:
         self.model_repo = model_repo
 
     def create_deployment(
-        self, deployment_data: DeploymentCreate
+        self, deployment_data: DeploymentCreate, correlation_id: Optional[str] = None
     ) -> tuple[Optional[DeploymentResponse], Optional[str]]:
         """Returns (deployment, error_message)"""
         # Validate model version exists
@@ -37,7 +37,7 @@ class DeploymentService:
                 if not staging_deployment:
                     return None, "Version must be deployed to STAGING before PRODUCTION"
 
-        deployment = self.deployment_repo.create_deployment(deployment_data)
+        deployment = self.deployment_repo.create_deployment(deployment_data, correlation_id)
         return DeploymentResponse.model_validate(deployment), None
 
     def get_deployment(self, deployment_id: str) -> Optional[DeploymentResponse]:
@@ -50,16 +50,15 @@ class DeploymentService:
         deployments = self.deployment_repo.list_deployments(
             status=status, environment=environment
         )
-        # Enrich with model and version info
+        # Enrich with model and version info (now preloaded via joinedload - no N+1 queries)
         responses = []
         for d in deployments:
             response = DeploymentResponse.model_validate(d)
-            version = self.model_repo.get_version(d.model_version_id)
-            if version:
-                response.version_number = version.version_number
-                model = self.model_repo.get_model(version.model_id)
-                if model:
-                    response.model_name = model.name
+            # Use preloaded relationships instead of additional queries
+            if hasattr(d, 'model_version') and d.model_version:
+                response.version_number = d.model_version.version_number
+                if hasattr(d.model_version, 'model') and d.model_version.model:
+                    response.model_name = d.model_version.model.name
             responses.append(response)
         return responses
 
