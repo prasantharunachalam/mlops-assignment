@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from typing import Optional, List
 from app.models import Model, ModelVersion
 from app.schemas.model import ModelCreate
 from app.schemas.model_version import ModelVersionCreate
+import uuid
 
 
 class ModelRepository:
@@ -10,13 +12,19 @@ class ModelRepository:
         self.db = db
 
     def create_model(self, model_data: ModelCreate) -> Model:
-        from datetime import datetime
-        model_id = f"model-{datetime.utcnow().timestamp()}"
+        model_id = f"model-{uuid.uuid4()}"
         model = Model(id=model_id, **model_data.model_dump())
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
-        return model
+        try:
+            self.db.commit()
+            self.db.refresh(model)
+            return model
+        except IntegrityError as e:
+            self.db.rollback()
+            raise ValueError(f"Model creation failed due to constraint violation: {str(e)}")
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during model creation: {str(e)}")
 
     def get_model(self, model_id: str) -> Optional[Model]:
         return self.db.query(Model).filter(Model.id == model_id).first()
@@ -28,13 +36,19 @@ class ModelRepository:
         return query.limit(limit).all()
 
     def create_version(self, model_id: str, version_data: ModelVersionCreate) -> ModelVersion:
-        from datetime import datetime
-        version_id = f"ver-{datetime.utcnow().timestamp()}"
+        version_id = f"ver-{uuid.uuid4()}"
         version = ModelVersion(id=version_id, model_id=model_id, **version_data.model_dump())
         self.db.add(version)
-        self.db.commit()
-        self.db.refresh(version)
-        return version
+        try:
+            self.db.commit()
+            self.db.refresh(version)
+            return version
+        except IntegrityError as e:
+            self.db.rollback()
+            raise ValueError(f"Version creation failed due to constraint violation: {str(e)}")
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during version creation: {str(e)}")
 
     def get_version(self, version_id: str) -> Optional[ModelVersion]:
         return self.db.query(ModelVersion).filter(ModelVersion.id == version_id).first()
@@ -56,6 +70,10 @@ class ModelRepository:
 
         version.lifecycle_stage = target_stage
         version.row_version += 1
-        self.db.commit()
-        self.db.refresh(version)
-        return version
+        try:
+            self.db.commit()
+            self.db.refresh(version)
+            return version
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during lifecycle update: {str(e)}")

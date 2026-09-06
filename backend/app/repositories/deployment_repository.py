@@ -1,8 +1,10 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from typing import Optional, List
 from datetime import datetime
-from app.models import Deployment, DeploymentStatus
+import uuid
+from app.models import Deployment, DeploymentStatus, ModelVersion, Model
 from app.schemas.deployment import DeploymentCreate
 
 
@@ -10,20 +12,32 @@ class DeploymentRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_deployment(self, deployment_data: DeploymentCreate) -> Deployment:
+    def create_deployment(self, deployment_data: DeploymentCreate, correlation_id: Optional[str] = None) -> Deployment:
         # Check for existing idempotency key
         existing = self.get_by_idempotency_key(deployment_data.idempotency_key)
         if existing:
             return existing
 
         deployment = Deployment(
-            id=f"dep-{datetime.utcnow().timestamp()}",
+            id=f"dep-{uuid.uuid4()}",
+            correlation_id=correlation_id,
             **deployment_data.model_dump(),
         )
         self.db.add(deployment)
-        self.db.commit()
-        self.db.refresh(deployment)
-        return deployment
+        try:
+            self.db.commit()
+            self.db.refresh(deployment)
+            return deployment
+        except IntegrityError as e:
+            self.db.rollback()
+            # Check again for duplicate idempotency key (race condition)
+            existing = self.get_by_idempotency_key(deployment_data.idempotency_key)
+            if existing:
+                return existing
+            raise ValueError(f"Deployment creation failed due to constraint violation: {str(e)}")
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during deployment creation: {str(e)}")
 
     def get_deployment(self, deployment_id: str) -> Optional[Deployment]:
         return self.db.query(Deployment).filter(Deployment.id == deployment_id).first()
@@ -34,7 +48,14 @@ class DeploymentRepository:
     def list_deployments(
         self, status: Optional[str] = None, environment: Optional[str] = None, limit: int = 50
     ) -> List[Deployment]:
-        query = self.db.query(Deployment).order_by(Deployment.requested_at.desc())
+        # Use joinedload to eagerly fetch related ModelVersion and Model (prevents N+1 queries)
+        query = (
+            self.db.query(Deployment)
+            .options(
+                joinedload(Deployment.model_version).joinedload(ModelVersion.model)
+            )
+            .order_by(Deployment.requested_at.desc())
+        )
         if status:
             query = query.filter(Deployment.status == status)
         if environment:
@@ -54,9 +75,13 @@ class DeploymentRepository:
         if failure_reason:
             deployment.failure_reason = failure_reason
 
-        self.db.commit()
-        self.db.refresh(deployment)
-        return deployment
+        try:
+            self.db.commit()
+            self.db.refresh(deployment)
+            return deployment
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during status update: {str(e)}")
 
     def increment_attempt(self, deployment_id: str) -> Optional[Deployment]:
         deployment = self.get_deployment(deployment_id)
@@ -65,9 +90,13 @@ class DeploymentRepository:
 
         deployment.attempt_count += 1
         deployment.status = DeploymentStatus.REQUESTED
-        self.db.commit()
-        self.db.refresh(deployment)
-        return deployment
+        try:
+            self.db.commit()
+            self.db.refresh(deployment)
+            return deployment
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise RuntimeError(f"Database error during attempt increment: {str(e)}")
 
     def get_latest_succeeded_deployment(
         self, model_id: str, environment: str, exclude_deployment_id: Optional[str] = None
