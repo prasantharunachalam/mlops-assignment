@@ -198,7 +198,8 @@ npm test
 
 1. Navigate to "Deployments" page
 2. View deployment status:
-   - PENDING: Waiting for async worker
+   - REQUESTED: Waiting for async worker
+   - VALIDATING: Checking approval gates
    - DEPLOYING: In progress
    - SUCCEEDED: Completed successfully
    - FAILED: Encountered error
