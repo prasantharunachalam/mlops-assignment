@@ -44,15 +44,15 @@ class DeploymentWorker:
                 repo.update_status(deployment.id, DeploymentStatus.DEPLOYING)
                 await asyncio.sleep(1)
 
-                # Simulate success/failure (100% success rate for testing)
-                if random.random() < 1.0:
+                # Simulate success/failure (95% success rate - realistic for production)
+                if random.random() < 0.95:
                     repo.update_status(deployment.id, DeploymentStatus.SUCCEEDED)
                     logger.info(f"Deployment {deployment.id} succeeded")
                 else:
                     repo.update_status(
                         deployment.id,
                         DeploymentStatus.FAILED,
-                        failure_reason="Simulated deployment failure"
+                        failure_reason="Simulated deployment failure (network timeout/resource unavailable)"
                     )
                     logger.warning(f"Deployment {deployment.id} failed")
 
