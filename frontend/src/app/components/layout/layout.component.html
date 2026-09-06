@@ -1,0 +1,27 @@
+<mat-toolbar color="primary">
+  <span>MLOps Platform</span>
+  <span class="spacer"></span>
+</mat-toolbar>
+
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <mat-nav-list>
+      <a mat-list-item routerLink="/models" routerLinkActive="active-link">
+        <mat-icon>model_training</mat-icon>
+        <span>Models</span>
+      </a>
+      <a mat-list-item routerLink="/deployments" routerLinkActive="active-link">
+        <mat-icon>rocket_launch</mat-icon>
+        <span>Deployments</span>
+      </a>
+      <a mat-list-item routerLink="/monitoring" routerLinkActive="active-link">
+        <mat-icon>analytics</mat-icon>
+        <span>Monitoring</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <router-outlet></router-outlet>
+  </mat-sidenav-content>
+</mat-sidenav-container>
