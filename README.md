@@ -66,9 +66,7 @@ Access the application at [http://localhost:4200](http://localhost:4200)
 
 ### 3. Verify Backend API
 
-API documentation is available at:
-- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
-- ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+Interactive API documentation (Swagger UI) is available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
 Test the health endpoint:
 ```bash
