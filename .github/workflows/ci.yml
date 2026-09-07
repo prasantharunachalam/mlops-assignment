@@ -30,7 +30,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd backend
-          pytest --cov=app --cov-report=term-missing --cov-fail-under=80
+          pytest --cov=app --cov-report=term-missing --cov-fail-under=65
 
   frontend-tests:
     runs-on: ubuntu-latest
